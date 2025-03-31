@@ -55,30 +55,42 @@ def main(
 
     model = Model()
 
-    data = torch.rand(32, 3, 640, 640)
+    data = torch.rand(1, 3, 640, 640)
     size = torch.tensor([[640, 640]])
     _ = model(data, size)
 
-    dynamic_axes = {
-        "images": {
-            0: "N",
-        },
-        "orig_target_sizes": {0: "N"},
-    }
+    use_dynamic = False
 
     output_file = args.resume.replace(".pth", ".onnx") if args.resume else "model.onnx"
 
-    torch.onnx.export(
-        model,
-        (data, size),
-        output_file,
-        input_names=["images", "orig_target_sizes"],
-        output_names=["labels", "boxes", "scores"],
-        dynamic_axes=dynamic_axes,
-        opset_version=16,
-        verbose=False,
-        do_constant_folding=True,
-    )
+    if use_dynamic:
+        dynamic_axes = {
+            "images": {
+                0: "N",
+            },
+            "orig_target_sizes": {0: "N"},
+        }
+        torch.onnx.export(
+            model,
+            (data, size),
+            output_file,
+            input_names=["images", "orig_target_sizes"],
+            output_names=["labels", "boxes", "scores"],
+            dynamic_axes=dynamic_axes,
+            opset_version=17,
+            verbose=False,
+            do_constant_folding=True)
+    else:
+        torch.onnx.export(
+            model,
+            (data, size),
+            output_file,
+            input_names=["images", "orig_target_sizes"],
+            output_names=["labels", "boxes", "scores"],
+            dynamic_axes=None,
+            opset_version=17,
+            verbose=False,
+            do_constant_folding=True)
 
     if args.check:
         import onnx
